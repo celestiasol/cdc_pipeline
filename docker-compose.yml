@@ -40,6 +40,8 @@ services:
   postgres:
     image: postgres:${POSTGRES_VERSION}
     container_name: ${PROJECT_NAME}_postgres
+    env_file:
+      - .credentials
     ports:
       - "${POSTGRES_PORT}:5432"
     environment:
