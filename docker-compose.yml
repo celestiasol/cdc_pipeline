@@ -89,14 +89,13 @@ services:
   # =========================
 
   duckdb-sink:
-    image: python:3.11-slim
+    build:
+      context: .
+      dockerfile: Dockerfile.duckdb_sink
     container_name: ${PROJECT_NAME}_duckdb_sink
-    working_dir: /app
     volumes:
-      - .:/app
       - duckdb_data:/data
     environment:
-      PYTHONPATH: /app/src
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       DUCKDB_PATH: /data/${DUCKDB_PATH}
       TOPIC_PREFIX: ${TOPIC_PREFIX}
@@ -104,7 +103,6 @@ services:
       - kafka
       - kafka-connect
     restart: unless-stopped
-    command: python src/consumer/duckdb_sink.py
 
 
 volumes:

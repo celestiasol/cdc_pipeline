@@ -1,18 +1,28 @@
-from kafka import KafkaConsumer
+from kafka import KafkaConsumer, errors
 import duckdb
 import json
-from consumer.config import config
-from utils.db_utils import (
+import time
+from src.consumer.config import config
+from src.utils.duckdb_utils import (
     ensure_table_and_schema,
     extract_schema_from_debezium,
     upsert
 )
 
-consumer = KafkaConsumer(
-    *config["TOPICS"],
-    bootstrap_servers=config["KAFKA_BOOTSTRAP_SERVERS"],
-    value_deserializer=lambda m: json.loads(m.decode("utf-8"))
-)
+
+while True:
+    try:
+        consumer = KafkaConsumer(
+            *config["TOPICS"],
+            bootstrap_servers=config["KAFKA_BOOTSTRAP_SERVERS"],
+            value_deserializer=lambda m: json.loads(m.decode("utf-8")),
+            auto_offset_reset='earliest'
+        )
+        print("Connected to Kafka broker")
+        break
+    except errors.NoBrokersAvailable:
+        print("Kafka not ready, retrying in 5s...")
+        time.sleep(5)
 
 con = duckdb.connect(config["DUCKDB_PATH"])
 
