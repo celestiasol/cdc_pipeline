@@ -9,7 +9,6 @@ __pycache__/
 
 # Data artifacts
 *.duckdb
-/data/
 
 # Generated connector configs
 connectors/*-connector.json
