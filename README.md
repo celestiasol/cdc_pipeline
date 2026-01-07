@@ -31,7 +31,7 @@ graph LR
 ```
 cdc_pipeline/
 ├── docker-compose.yml
-├── .env
+├── .env.example
 ├── .credentials.example
 ├── README.md
 ├── requirements.txt
@@ -69,7 +69,7 @@ python --version
 
 ### 1. Clone the repository
 ```
-git clone git@github.com:yourusername/cdc_pipeline.git
+git clone git@github.com:celestiasol/cdc_pipeline.git
 cd cdc_pipeline
 ```
 
@@ -124,7 +124,7 @@ docker ps
 ```
 and you should see:
 - cdc_pipeline_zookeeper
-- cdc_pipeline kafka
+- cdc_pipeline_kafka
 - cdc_pipeline_postgres
 - cdc_pipeline_kafka_connect
 - cdc_pipeline_duckdb_sink
@@ -179,7 +179,7 @@ curl http://localhost:8083/connectors/cdc_db_connector/status
 ### 8. Set up Postgres DB
 Before we insert any data, we have to create new tables in our database. You can do this by manually entering the postgresql container and perform DDL and DML in there by running SQL commands, or you can run
 ```
-docker exec -i cdc_pipeline_postgres psql -U cdc_user -d cdc_db < data/init_data.sql
+docker exec -i cdc_pipeline_postgres psql -U ${your_postgres_user} -d ${your_postgres_db} < data/init_data.sql
 ```
 to execute the script supplemented in this repo for tables creation and sample data insertion, you can also edit the script before running it, if you want to use your own table structures and sample data.
 
@@ -258,4 +258,5 @@ docker compose down -v
 - Each table can have a dedicated sink for flexibility and schema evolution.
 - DuckDB is used for local development and testing; you can replace it with BigQuery or any warehouse for production.
 - Environment variables and credentials are separated for security and reproducibility.
+
 
