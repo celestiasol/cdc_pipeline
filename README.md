@@ -49,7 +49,11 @@ cdc_pipeline/
 │       ├── db_utils.py
 │       └── logger.py
 ├── data/
-└── infra/
+│       └── init_data.sql
+├── infra/
+│       └── init_postgres.sql
+└── tests/
+        └── test_duckdb_sink.py
 ```
 
 ## Setup & Deployment
@@ -217,10 +221,6 @@ DELETE FROM orders WHERE id = 1;
 and witness in our Kafka Topic logs and our sink logs that a new row has been processed (in Kafka Topic it would look like a JSON).
 
 ### 10. Verify the data in DuckDB
-DuckDB does not allow multiple connections to the same database file concurrently. Your sink process already has an open connection (duckdb_sink.py running in the container), so any other connection, even in read-only mode, will fail with that _duckdb.IOException: Could not set lock error.
-
-This is expected behavior — it’s not a bug. DuckDB is designed as an embedded single-writer database, so you can’t “peek in” while another process is writing.
-
 To ensure all pipelines are running smoothly without errors or mistakes, we have to verify that the data in our destination table should match the data in the source database. However, because DuckDB is designed as an embedded single-writer database, so we can’t “peek in” while another process is writing. DuckDB does not allow multiple connections to the same database file concurrently. Our sink process already has an open connection (duckdb_sink.py running in the container), so any other connection, even in read-only mode, will fail with `_duckdb.IOException: Could not set lock error`. But, we can copy the DuckDB file out of the container, make a temporary copy of the database and inspect it:
 ```
 docker cp cdc_pipeline_duckdb_sink:/data/cdc_pipeline.duckdb ./
@@ -236,6 +236,19 @@ Then once inside the CLI, we can run commands as such to verify the data:
 SELECT * FROM users LIMIT 10;
 .exit
 ```
+
+### Running Tests
+This project uses Python's built-in `unittest` framework. The unit test mock Kafka and DuckDB dependencies, thus no need to install external services to run the tests, so running it locally is sufficient.
+To run the test, in your terminal:
+```
+python -m unittest discover -s tests -v
+```
+This test file focus on:
+- message parsing
+- schema extraction
+- upsert behavior
+- error handling
+
 
 ### Lifecycle Operations
 Restart everything:
@@ -258,5 +271,6 @@ docker compose down -v
 - Each table can have a dedicated sink for flexibility and schema evolution.
 - DuckDB is used for local development and testing; you can replace it with BigQuery or any warehouse for production.
 - Environment variables and credentials are separated for security and reproducibility.
+
 
 
