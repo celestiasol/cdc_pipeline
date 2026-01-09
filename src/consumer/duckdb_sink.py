@@ -8,6 +8,39 @@ from src.utils.logger import get_logger
 
 logger = get_logger("duckdb_sink")
 
+
+def process_message(message, connect):
+
+    event = message.value
+    payload = event.get("payload", {})
+    row = payload.get("after")
+    if not row:
+        return False
+
+    # Topic format: dbserver1.public.users
+    try:
+        _, schema_name, table_name = message.topic.split(".")
+    except ValueError:
+        logger.error(f"Unexpected topic format: {message.topic}")
+        return False
+
+    table = f"{schema_name}_{table_name}"
+
+    # Extract schema, fallback to inferred schema if missing
+    schema = extract_schema_from_debezium(payload)
+    if not schema:
+        logger.warning(f"Skipping message, schema not found in payload: {payload}")
+
+    pk = "id"  # table-specific primary key
+
+    # Ensure table exists and upsert row
+    ensure_table_and_schema(connect, table, schema, pk)
+    upsert(connect, table, pk, row)
+
+    logger.info(f"Upserted row into {table}: {row}")
+    return True
+
+
 # -----------------------------
 # Connect to Kafka with retries
 # -----------------------------
@@ -37,34 +70,6 @@ logger.info(f"Connected to DuckDB at {config['DUCKDB_PATH']}")
 # -----------------------------
 for message in consumer:
     try:
-        event = message.value
-        payload = event.get("payload", {})
-        row = payload.get("after")
-        if not row:
-            continue
-
-        # Topic format: dbserver1.public.users
-        try:
-            _, schema_name, table_name = message.topic.split(".")
-        except ValueError:
-            logger.error(f"Unexpected topic format: {message.topic}")
-            continue
-
-        table = f"{schema_name}_{table_name}"
-
-        # Extract schema, fallback to inferred schema if missing
-        schema = extract_schema_from_debezium(payload)
-        if not schema:
-            logger.warning(f"Skipping message, schema not found in payload: {payload}")
-            continue
-
-        pk = "id"  # table-specific primary key
-
-        # Ensure table exists and upsert row
-        ensure_table_and_schema(con, table, schema, pk)
-        upsert(con, table, pk, row)
-
-        logger.info(f"Upserted row into {table}: {row}")
-
+        process_message(message, con)
     except Exception as e:
         logger.exception(f"Error processing message: {message.value} - {e}")
